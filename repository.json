@@ -6,7 +6,7 @@
       "title": "example",
       "description": "example playerData",
       "version": "0.0.1",
-      "src": "",
+      "src": "https://raw.githubusercontent.com/web-revizor/movie-revizor-plugin-ts/main/dist/example.js",
       "type": "playerData"
     }
   ]
