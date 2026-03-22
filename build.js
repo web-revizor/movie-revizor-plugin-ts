@@ -1,7 +1,13 @@
 import { build } from 'esbuild';
+import { glob } from 'glob';
+
+const entryPoints = await glob([
+  'src/shared/plugins/*.ts',
+  'src/local/plugins/*.ts',
+]);
 
 await build({
-  entryPoints: ['src/shared/plugins/*.ts', 'src/local/plugins/*.ts'],
+  entryPoints,
   bundle: true,
   outdir: 'dist',
   entryNames: '[name]',
