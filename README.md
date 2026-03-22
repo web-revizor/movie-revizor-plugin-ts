@@ -5,7 +5,7 @@
 стандартизовані інтеграції з різними джерелами даних (сервіси, платформи тощо).
 
 Посилання на поточний
-репозиторій [Link](https://raw.githubusercontent.com/web-revizor/movie-revizor-plugin-ts/main/repository.json).
+репозиторій [Link](https://raw.githubusercontent.com/web-revizor/movie-revizor-plugin-ts/refs/heads/main/repository.json).
 
 ## 📁 Структура модуля
 
