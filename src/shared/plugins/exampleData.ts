@@ -30,14 +30,14 @@ async function getDataList({
 
   const items: {
     title: string;
-    link?: string;
+    link: string;
     fields?: {
       size?: string;
       status?: string;
     };
   }[] = [];
 
-  items.push({ title: 'test 1' }, { title: 'test 1' });
+  items.push({ title: 'test 1', link: '' }, { title: 'test 1', link: '' });
 
   if (items.length > 0) {
     const stringItems = JSON.stringify(items);
