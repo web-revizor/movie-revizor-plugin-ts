@@ -50,6 +50,15 @@ export interface SearchParams {
   query: string;
   fallbackTitles?: string[];
   isSerial: boolean;
+  traktId?: number;
+  traktIds?: ITraktIds;
+}
+
+export interface ITraktIds {
+  trakt?: number;
+  slug?: string;
+  tmdb?: number;
+  tvrage?: number;
 }
 
 export class PlayerEpisode {

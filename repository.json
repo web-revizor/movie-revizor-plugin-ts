@@ -8,6 +8,13 @@
       "version": "0.0.1",
       "src": "https://raw.githubusercontent.com/web-revizor/movie-revizor-plugin-ts/refs/heads/main/dist/example.js",
       "type": "playerData"
+    },
+    {
+      "title": "logParams",
+      "description": "logParams playerData",
+      "version": "0.0.1",
+      "src": "https://raw.githubusercontent.com/web-revizor/movie-revizor-plugin-ts/refs/heads/main/dist/logParams.js",
+      "type": "playerData"
     }
   ]
 }
