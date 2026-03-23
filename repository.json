@@ -10,11 +10,11 @@
       "type": "playerData"
     },
     {
-      "title": "logParams",
-      "description": "logParams playerData",
+      "title": "exampleData",
+      "description": "example DataList",
       "version": "0.0.1",
-      "src": "https://raw.githubusercontent.com/web-revizor/movie-revizor-plugin-ts/refs/heads/main/dist/logParams.js",
-      "type": "playerData"
+      "src": "https://raw.githubusercontent.com/web-revizor/movie-revizor-plugin-ts/refs/heads/main/dist/exampleData.js",
+      "type": "dataList"
     }
   ]
 }
