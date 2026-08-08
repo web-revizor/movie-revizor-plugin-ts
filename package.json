@@ -5,10 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build-es": "node build.js",
     "build": "vite build",
     "preview": "vite preview",
-    "watch": "vite build --watch"
+    "build-es": "node build.js",
+    "watch": "node build.js --watch"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.2",
