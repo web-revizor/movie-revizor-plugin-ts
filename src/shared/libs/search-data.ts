@@ -1,19 +1,9 @@
-import {
-  FlutterResponse,
-  ITraktIds,
-  PlayerData,
-  SearchParams,
-} from '@/src/shared/types';
+import { FlutterResponse, PlayerData, SearchParams } from '@/src/shared/types';
 import { cancelledError, notFoundError } from '@/src/shared/utils/utils.ts';
 
 interface ISearchDataGlobal {
   params: SearchParams;
-  fetchFunction: (
-    query: string,
-    isSerial: boolean,
-    traktId?: number,
-    traktIds?: ITraktIds
-  ) => Promise<IFetchFunctionPromise>;
+  fetchFunction: (params: SearchParams) => Promise<IFetchFunctionPromise>;
 }
 
 export type IFetchFunctionPromise = PlayerData | null | string;
@@ -25,9 +15,6 @@ export default async function searchDataGlobal({
   const allTitles = [params.query, ...(params.fallbackTitles || [])].filter(
     (t, i, arr) => t && t.trim() !== '' && arr.indexOf(t) === i
   );
-
-  const traktId = params.traktId;
-  const traktIds = params.traktIds;
 
   let selectedTitleIndex = 0;
 
@@ -57,12 +44,7 @@ export default async function searchDataGlobal({
 
   const title = allTitles[selectedTitleIndex];
 
-  const response = await fetchFunction(
-    title,
-    params.isSerial,
-    traktId,
-    traktIds
-  );
+  const response = await fetchFunction(params);
 
   if (!response) return notFoundError(`Нічого не знайдено: ${title}`);
 

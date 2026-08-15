@@ -4,10 +4,10 @@ import searchDataGlobal, {
 } from '@/src/shared/libs/search-data.ts';
 import { fetchFlutter } from '@/src/shared/client/mainClient.ts';
 
-async function fetchFunction(
-  query: string,
-  isSerial: boolean
-): Promise<IFetchFunctionPromise> {
+async function fetchFunction({
+  query,
+  isSerial,
+}: SearchParams): Promise<IFetchFunctionPromise> {
   const rootUrl = 'https://example.com';
 
   const searchResponse = await fetchFlutter(

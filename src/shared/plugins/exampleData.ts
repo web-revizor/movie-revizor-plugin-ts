@@ -1,24 +1,15 @@
-import { FlutterResponse, ITraktIds } from '@/src/shared/types';
+import { FlutterResponse } from '@/src/shared/types';
 import { notFoundError } from '@/src/shared/utils/utils.ts';
 import { fetchFlutter } from '@/src/shared/client/mainClient.ts';
 
 interface IGetDataList {
   query: string;
   isSerial?: boolean;
-  traktId?: number;
-  traktIds?: ITraktIds;
 }
 
-async function getDataList({
-  query,
-  isSerial,
-  traktIds,
-  traktId,
-}: IGetDataList) {
+async function getDataList({ query, isSerial }: IGetDataList) {
   console.log(query);
   console.log(isSerial);
-  console.log(traktId);
-  console.log(traktIds);
 
   const rootUrl = 'https://example.com';
 

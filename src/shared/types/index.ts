@@ -49,16 +49,12 @@ export interface CardItem {
 export interface SearchParams {
   query: string;
   fallbackTitles?: string[];
-  isSerial: boolean;
-  traktId?: number;
-  traktIds?: ITraktIds;
-}
-
-export interface ITraktIds {
-  trakt?: number;
-  slug?: string;
-  tmdb?: number;
-  tvrage?: number;
+  isSerial?: boolean;
+  isPerson?: boolean;
+  isMovie?: boolean;
+  seasonNumber: number;
+  episodeNumber: number;
+  seriesTitle?: string;
 }
 
 export class PlayerEpisode {

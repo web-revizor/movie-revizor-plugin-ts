@@ -1,18 +1,12 @@
-import { ITraktIds, SearchParams } from '@/src/shared/types';
+import { SearchParams } from '@/src/shared/types';
 import searchDataGlobal, {
   IFetchFunctionPromise,
 } from '@/src/shared/libs/search-data.ts';
 
 async function fetchFunction(
-  query: string,
-  isSerial?: boolean,
-  traktId?: number,
-  traktIds?: ITraktIds
+  props: SearchParams
 ): Promise<IFetchFunctionPromise> {
-  console.log(query);
-  console.log(isSerial);
-  console.log(traktId);
-  console.log(traktIds);
+  console.log(props);
 
   return null;
 }
