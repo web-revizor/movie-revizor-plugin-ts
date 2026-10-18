@@ -1,6 +1,6 @@
-import { FlutterResponse } from '@/src/shared/types';
-import { notFoundError } from '@/src/shared/utils/utils.ts';
-import { fetchFlutter } from '@/src/shared/client/mainClient.ts';
+import { FlutterResponse } from '../types/index.ts';
+import { notFoundError } from '../utils/utils.ts';
+import { fetchFlutter } from '../client/mainClient.ts';
 
 interface IGetDataList {
   query: string;

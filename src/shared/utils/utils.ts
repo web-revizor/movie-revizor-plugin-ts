@@ -1,4 +1,4 @@
-import { FlutterResponse } from '@/src/shared/types';
+import { FlutterResponse } from '../types/index.ts';
 
 export const cancelledError = () =>
   JSON.stringify(

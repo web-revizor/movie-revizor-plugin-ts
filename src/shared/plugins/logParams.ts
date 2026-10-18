@@ -1,7 +1,7 @@
-import { SearchParams } from '@/src/shared/types';
+import { SearchParams } from '../types/index.ts';
 import searchDataGlobal, {
   IFetchFunctionPromise,
-} from '@/src/shared/libs/search-data.ts';
+} from '../libs/search-data.ts';
 
 async function fetchFunction(
   props: SearchParams

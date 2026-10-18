@@ -1,4 +1,4 @@
-import { HttpMethod } from '@/src/shared/types';
+import { HttpMethod } from '../types/index.ts';
 
 export async function fetchFlutter(
   url: string,

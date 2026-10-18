@@ -4,5 +4,3 @@ dist/*
 !dist/example.js
 !dist/logParams.js
 !dist/exampleData.js
-/src/local/
-repository-local.json

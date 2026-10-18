@@ -1,8 +1,8 @@
-import { CardItem, PlayerData, SearchParams } from '@/src/shared/types';
+import { CardItem, PlayerData, SearchParams } from '../types/index.ts';
 import searchDataGlobal, {
   IFetchFunctionPromise,
-} from '@/src/shared/libs/search-data.ts';
-import { fetchFlutter } from '@/src/shared/client/mainClient.ts';
+} from '../libs/search-data.ts';
+import { fetchFlutter } from '../client/mainClient.ts';
 
 async function fetchFunction({
   query,

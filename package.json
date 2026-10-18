@@ -8,7 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "build-es": "node build.js",
-    "watch": "node build.js --watch"
+    "watch": "node build.js --watch",
+    "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.2",
@@ -26,5 +27,8 @@
     "typescript-eslint": "^8.52.0",
     "vite": "^5.0.8",
     "glob": "^13.0.6"
+  },
+  "engines": {
+    "node": ">=24"
   }
 }

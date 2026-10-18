@@ -1,5 +1,5 @@
-import { FlutterResponse, PlayerData, SearchParams } from '@/src/shared/types';
-import { cancelledError, notFoundError } from '@/src/shared/utils/utils.ts';
+import { FlutterResponse, PlayerData, SearchParams } from '../types/index.ts';
+import { cancelledError, notFoundError } from '../utils/utils.ts';
 
 interface ISearchDataGlobal {
   params: SearchParams;

@@ -3,7 +3,6 @@ import { glob } from 'glob';
 
 const entryPoints = await glob([
   'src/shared/plugins/*.ts',
-  'src/local/plugins/*.ts',
 ]);
 
 const ctx = await context({

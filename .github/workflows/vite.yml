@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+  pull_request:
 
 jobs:
   build:
@@ -14,7 +15,11 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: '24'
+          cache: yarn
 
-      - run: npm install
-      - run: npm run build-es
+      - run: yarn install --frozen-lockfile
+      - run: yarn typecheck
+      - run: yarn build-es
+      # Committed example builds must match their sources.
+      - run: git diff --exit-code -- dist
