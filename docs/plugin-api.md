@@ -141,7 +141,7 @@ return JSON.stringify(new FlutterResponse({ result: JSON.stringify(data), isErro
 
 - Обов'язкові: `title` у групи / сезону / епізоду, `file` в епізоду, `seasons`, `episodes`.
 - `id` епізоду — **рядок** (число зламає розбір).
-- `subtitle` — масив `{title, url}`, не рядок.
+- `subtitle` — масив `{title, url}`, не рядок. Формат визначається за розширенням у `url`: `.srt`, `.ass` / `.ssa`, `.ttml` / `.dfxp` / `.xml`, інакше WebVTT. Мову плеєр бере з `title` («Українська…», «Англійська…» / «English», «Російська…»), а перші субтитри в списку вмикаються за замовчуванням.
 
 ### `dataList`: масив записів
 
