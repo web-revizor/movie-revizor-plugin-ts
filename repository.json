@@ -7,14 +7,16 @@
       "description": "example playerData",
       "version": "0.0.1",
       "src": "https://raw.githubusercontent.com/web-revizor/movie-revizor-plugin-ts/refs/heads/main/dist/example.js",
-      "type": "playerData"
+      "type": "playerData",
+      "supported_types": ["movie", "show"]
     },
     {
       "title": "exampleData",
       "description": "example DataList",
       "version": "0.0.1",
       "src": "https://raw.githubusercontent.com/web-revizor/movie-revizor-plugin-ts/refs/heads/main/dist/exampleData.js",
-      "type": "dataList"
+      "type": "dataList",
+      "supported_types": ["movie", "show"]
     }
   ]
 }
