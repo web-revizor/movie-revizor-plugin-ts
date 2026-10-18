@@ -49,6 +49,8 @@ export interface CardItem {
 export interface SearchParams {
   query: string;
   fallbackTitles?: string[];
+  /** The user turned the title picker off for this plugin: search the titles in order without asking. */
+  autoSelectTitle?: boolean;
   isSerial?: boolean;
   isPerson?: boolean;
   isMovie?: boolean;

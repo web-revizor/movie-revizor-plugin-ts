@@ -6,65 +6,75 @@ interface ISearchDataGlobal {
   fetchFunction: (params: SearchParams) => Promise<IFetchFunctionPromise>;
 }
 
+/**
+ * - `PlayerData`: the result;
+ * - `null`: nothing found for this `query`, the next title is tried;
+ * - `string`: stop with this message (cancelled, or a failure after the user
+ *   already chose something).
+ */
 export type IFetchFunctionPromise = PlayerData | null | string;
 
+function isValidResult(playerData: PlayerData, params: SearchParams): boolean {
+  return params.isSerial
+    ? !!playerData.playerLangGroup && playerData.playerLangGroup.length > 0
+    : !!playerData.file && playerData.file.trim() !== '';
+}
+
+/** Index of the title the user picked, or null when cancelled. */
+async function chooseTitle(titles: string[]): Promise<number | null> {
+  const dialogData = {
+    title: 'Оберіть варіант пошуку',
+    cancelText: 'Скасувати',
+    items: titles.map((t) => ({ title: t })),
+    // The app adds a "Більше не питати" switch and then sends
+    // `autoSelectTitle` for this plugin.
+    autoSelectTitleOption: true,
+  };
+  // eslint-disable-next-line no-undef
+  const index = await sendMessage(
+    'showDialogData',
+    JSON.stringify({ dialogData })
+  );
+  return typeof index === 'number' && index >= 0 && index < titles.length
+    ? index
+    : null;
+}
+
+/**
+ * Asks which title to search first (unless `autoSelectTitle` is set), runs
+ * `fetchFunction` with it as `query`, then with each other title in order
+ * until one returns a result or a message.
+ */
 export default async function searchDataGlobal({
   params,
   fetchFunction,
 }: ISearchDataGlobal): Promise<string> {
-  const allTitles = [params.query, ...(params.fallbackTitles || [])].filter(
+  let titles = [params.query, ...(params.fallbackTitles || [])].filter(
     (t, i, arr) => t && t.trim() !== '' && arr.indexOf(t) === i
   );
 
-  let selectedTitleIndex = 0;
+  if (titles.length > 1 && !params.autoSelectTitle) {
+    const chosen = await chooseTitle(titles);
+    if (chosen === null) return cancelledError();
+    titles = [titles[chosen], ...titles.filter((_, i) => i !== chosen)];
+  }
 
-  if (allTitles.length > 1) {
-    const titleDialogData = {
-      title: 'Оберіть варіант пошуку',
-      cancelText: 'Скасувати',
-      items: allTitles.map((t) => ({ title: t })),
-    };
+  for (const title of titles) {
+    const response = await fetchFunction({ ...params, query: title });
 
-    // eslint-disable-next-line no-undef
-    const chosenIndex = await sendMessage(
-      'showDialogData',
-      JSON.stringify({ dialogData: titleDialogData })
-    );
+    if (!response) continue;
 
-    if (
-      chosenIndex === null ||
-      chosenIndex === undefined ||
-      typeof chosenIndex !== 'number'
-    ) {
-      return cancelledError();
+    if (typeof response === 'string') return notFoundError(response);
+
+    if (isValidResult(response, params)) {
+      return JSON.stringify(
+        new FlutterResponse({
+          result: JSON.stringify(response),
+          isError: false,
+        })
+      );
     }
-
-    selectedTitleIndex = chosenIndex;
   }
 
-  const title = allTitles[selectedTitleIndex];
-
-  const response = await fetchFunction(params);
-
-  if (!response) return notFoundError(`Нічого не знайдено: ${title}`);
-
-  if (typeof response === 'string') {
-    return notFoundError(response);
-  }
-
-  const playerData = response;
-  const isValid = params.isSerial
-    ? playerData.playerLangGroup && playerData.playerLangGroup.length > 0
-    : playerData.file && playerData.file.trim() !== '';
-
-  if (isValid) {
-    return JSON.stringify(
-      new FlutterResponse({
-        result: JSON.stringify(playerData),
-        isError: false,
-      })
-    );
-  }
-
-  return notFoundError(params.query ?? '');
+  return notFoundError(`Нічого не знайдено: ${titles[0] ?? params.query}`);
 }
