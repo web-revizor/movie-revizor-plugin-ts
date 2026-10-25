@@ -232,6 +232,20 @@ const values = await sendMessage('showDialogFields', JSON.stringify({
 
 З `saveData: true` і заданим `pluginSettingsKey` у конфігу значення зберігаються в захищеному сховищі й підставляються при наступному показі.
 
+`value` у полі — текст, з яким воно відкривається (наприклад, назва, за якою плагін щойно шукав, щоб користувач її виправив). Збережене значення (`saveData`) має перевагу над `value`.
+
+```javascript
+const fixed = await sendMessage('showDialogFields', JSON.stringify({
+  dialogFields: {
+    title: 'Нічого не знайдено',
+    applyText: 'Шукати',
+    cancelText: 'Скасувати',
+    items: [{ label: 'Назва', fieldKey: 'query', value: params.query }],
+  },
+}));
+// { query: '…' } або null
+```
+
 ### `getSavedData` — збережені значення
 
 ```javascript
