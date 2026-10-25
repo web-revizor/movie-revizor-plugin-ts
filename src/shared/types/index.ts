@@ -30,6 +30,8 @@ export interface PlayerDataParams {
   subtitle?: SubtitleResult;
   poster?: string | null;
   playerLangGroup?: PlayerLangGroup[] | null;
+  /** Optional pointer for a `resume` run; out of range = ignored. */
+  start?: PlayerStart | null;
 }
 
 export interface FlutterResponseParams {
@@ -57,6 +59,51 @@ export interface SearchParams {
   seasonNumber: number;
   episodeNumber: number;
   seriesTitle?: string;
+  /** TMDB id of the title (the series on season / episode screens); absent in old app versions. */
+  tmdbId?: number | null;
+  mediaType?: 'movie' | 'tv';
+  /** The run was not started by the user: no dialogs. */
+  quiet?: boolean;
+  /**
+   * true = «Продовжити»: use what you remembered and ask nothing if you can;
+   * false = a fresh choice: ignore it, ask again, remember the new answer;
+   * absent = old app version.
+   */
+  resume?: boolean;
+}
+
+/** Where «Продовжити» should start: indexes into the returned `playerLangGroup`. */
+export interface PlayerStart {
+  langGroup: number;
+  season: number;
+  episode: number;
+}
+
+/** A `dataList` row. */
+export interface DataListItem {
+  title: string;
+  link?: string | null;
+  fields?: Record<string, string>;
+  torrentUrl?: string;
+  /** In a `resume` run: the app plays this row at once (its `torrentUrl`, else `link`). */
+  resume?: boolean;
+}
+
+/** Params of the optional `onItemSelected` entry point. */
+export interface ItemSelectedParams {
+  tmdbId?: number | null;
+  mediaType?: 'movie' | 'tv';
+  isSerial?: boolean;
+  seasonNumber?: number | null;
+  episodeNumber?: number | null;
+  selected:
+    | { kind: 'dataListItem'; item: DataListItem }
+    | {
+        kind: 'playerData';
+        langGroup: { title: string; index: number } | null;
+        season: { title: string; index: number } | null;
+        episode: { title: string; index: number } | null;
+      };
 }
 
 export class PlayerEpisode {
@@ -106,17 +153,20 @@ export class PlayerData {
   subtitle: SubtitleResult;
   poster: string | null;
   playerLangGroup: PlayerLangGroup[] | null;
+  start: PlayerStart | null;
 
   constructor({
     file = null,
     subtitle = null,
     poster = null,
     playerLangGroup = null,
+    start = null,
   }: PlayerDataParams) {
     this.file = file;
     this.subtitle = subtitle;
     this.poster = poster;
     this.playerLangGroup = playerLangGroup;
+    this.start = start;
   }
 }
 
