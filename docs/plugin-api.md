@@ -97,6 +97,7 @@ return JSON.stringify(new FlutterResponse({ result: JSON.stringify(data), isErro
 | `query` | string | назва (локалізована, інакше оригінальна) |
 | `serialID` | int? | TMDB id серіалу (для фільмів `null`) |
 | `isSerial` | bool? | серіал |
+| `tmdbId` | int? | TMDB id фільму або серіалу на його головному екрані (на екранах сезону, серії й персони `null`); разом з `isSerial` — ключ для даних, які плагін зберігає для цього тайтлу |
 | `traktId`, `traktIds` | — | зараз завжди `null` |
 
 ---
