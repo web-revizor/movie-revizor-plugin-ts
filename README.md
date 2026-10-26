@@ -1,363 +1,56 @@
-# Документація модуля плагінів
+# Movie Revizor plugin SDK
 
-API для авторів плагінів (формат репозиторію, точки входу, функції хоста, обмеження, оновлення): [docs/plugin-api.md](docs/plugin-api.md).
+Типи, клієнт і приклади плагінів для [Movie Revizor](https://github.com/web-revizor). Повний API для авторів (формат репозиторію, дозволи, точки входу, функції хоста, обмеження): [docs/plugin-api.md](docs/plugin-api.md).
 
-Папка `shared` містить спільну бібліотеку функцій та типів для роботи з пошуком контенту за допомогою API. Він
-забезпечує
-стандартизовані інтеграції з різними джерелами даних (сервіси, платформи тощо).
+Репозиторій прикладів для застосунку: `https://raw.githubusercontent.com/web-revizor/movie-revizor-plugin-ts/refs/heads/main/repository.json`
 
-Посилання на поточний
-репозиторій [Link](https://raw.githubusercontent.com/web-revizor/movie-revizor-plugin-ts/refs/heads/main/repository.json).
-
-## 📁 Структура модуля
+## Структура
 
 ```
 src/shared/
-├── types/              # Типи та інтерфейси
-│   └── index.ts        # Основні типове дані
-├── client/             # Клієнтські функції
-│   └── mainClient.ts   # Функція fetchFlutter()
-├── libs/               # Бібліотеки
-│   └── search-data.ts  # Пошукова логіка
-└── plugins/            # Приклади та реалізації
-    └── example.ts      # Приклад інтеграції
+├── types/          # типи даних і точок входу (index.ts), канали хоста (global.d.ts)
+├── client/         # fetchFlutter / fetchText / fetchJson — HTTP через хост
+├── libs/
+│   ├── host.ts             # діалоги, форми, itemData, toast, прапорець входу
+│   ├── search-data.ts      # searchDataGlobal: вибір назви й пошук за кількома назвами
+│   └── episode-from-path.ts# номери сезону / серії з назв файлів торрента
+├── utils/          # okResponse / errorResponse, expose (глобальні точки входу)
+└── plugins/        # приклади; кожен файл збирається в dist/<назва>.js
 ```
 
-## 🔧 Основні компоненти
+## Приклади
 
-### 1. Типи даних (`src/shared/types/index.ts`)
+Усі приклади використовують лише легальний контент.
 
-#### `SearchParams` - Параметри пошуку
+| Плагін | Тип | Показує |
+|--------|-----|---------|
+| `demoPlayer` | `playerData` | без мережі: фільм і «серіал» з групами / сезонами / серіями й `number`, субтитри з `lang` / `format`, вибір назви, «Продовжити» (`resume`, `itemData`, `start`), `onItemSelected`, фонове `onDetailsOpened` + `showToast` лише за власними даними |
+| `publicDomain` | `playerData` | справжні запити: Wikidata за TMDB id → відео з Wikimedia Commons чи Internet Archive, лише з позначкою суспільного надбання |
+| `demoDataList` | `dataList` | пошук в Internet Archive (суспільне надбання): поля з `poster`, `link`, `torrentUrl`, рядок `resume`, форма «Нічого не знайдено» з `value`, `mapTorrentFiles` |
+| `demoLogin` | `playerData` | вхід без справжнього сайту: форма з `saveData`, `getSavedData`, `setPluginInit` / `isPluginInit` |
+| `selfTest` | `testPlugin` | викликає кожну функцію хоста й повертає відповіді |
 
-```typescript
-interface SearchParams {
-    query: string;           // Запит пошуку
-    fallbackTitles?: string[]; // Резервні назви для альтернативного пошуку
-    isSerial: boolean;       // Чи є це серіалом (з сезонами)
-}
+Контент прикладів:
+
+- Big Buck Bunny, Sintel, Tears of Steel — © Blender Foundation, [www.blender.org](https://www.blender.org), ліцензія [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/). Потоки: `test-streams.mux.dev`, `demo.unified-streaming.com`, `download.blender.org`; субтитри — `download.blender.org`.
+- Фільми `publicDomain` і `demoDataList` — лише записи, які Wikidata (P6216 = Q19652) або Internet Archive (`licenseurl` з `publicdomain`) позначають як суспільне надбання. Позначка належить джерелу; перед поширенням у своїй країні перевіряйте статус фільму самі.
+
+## Збірка й перевірки
+
+Node.js 24, Yarn 1.
+
+```bash
+yarn install --frozen-lockfile
+yarn typecheck
+yarn lint
+yarn build-es        # dist/*.js (esbuild, ES2020, без import/export)
 ```
 
-#### `CardItem` - Картка результату попереднього пошуку
+CI (`.github/workflows/vite.yml`) запускає те саме й перевіряє, що закомічений `dist/` збігається з кодом.
 
-```typescript
-interface CardItem {
-    title: string | null;    // Назва контенту
-    href?: string | null;    // Посилання на контент
-    img?: string | null;     // Зображення
-    rating?: number | null;  // Рейтинг
-    year?: string | null;    // Рік виходу
-    genre?: string | null;   // Жанр
-}
-```
+## Новий плагін
 
-#### `PlayerData` - Дані про медіа
-
-```typescript
-class PlayerData {
-    file: string | null;           // Посилання на файл
-    subtitle: SubtitleResult;      // Субтитри
-    poster: string | null;         // Обкладинка
-    playerLangGroup: PlayerLangGroup[] | null; // Мовні групи з сезонами
-}
-
-class PlayerSeason {
-    title: string;           // Назва сезону
-    episodes: PlayerEpisode[]; // Епізоди сезону
-}
-
-class PlayerEpisode {
-    title: string;       // Назва епізоду
-    file: string;        // Посилання на файл
-    id?: number | string; // Унікальний ID
-    poster?: string | null; // Обкладинка
-    subtitle?: SubtitleResult[]; // Субтитри
-}
-
-class PlayerLangGroup {
-    title: string;           // Назва мовної групи
-    seasons: PlayerSeason[]; // Сезони в цій групі
-}
-```
-
-#### `FlutterResponse` - Відповідь від Flutter-сервісу
-
-```typescript
-class FlutterResponse {
-    result: string;         // JSON дані результату
-    isError: boolean;       // Чи була помилка
-}
-```
-
-### 2. Функція пошуку (`src/shared/libs/search-data.ts`)
-
-#### `searchDataGlobal()` - Основна функція пошуку
-
-**Параметри:**
-
-- `params`: Об'єкт з параметрами пошуку
-- `fetchFunction`: Функція для отримання даних (реалізується в plugin)
-
-**Тип повернення:**
-
-```typescript
-type IFetchFunctionPromise = PlayerData | null | string;
-// - PlayerData: Успішний результат
-// - null: за цією назвою нічого не знайдено — пробується наступна назва
-// - string: зупинитись з цим повідомленням (скасовано, або помилка вже
-//   після того, як користувач щось обрав)
-```
-
-**Логіка роботи:**
-
-1. Об'єднує основний запит та резервні назви (`fallbackTitles`), без повторів
-2. Якщо назв кілька і `autoSelectTitle` не задано — питає, з якої почати (обрана йде першою)
-3. Викликає `fetchFunction()` для кожної назви по черзі (назва — у `query`), доки не отримає результат або повідомлення
-4. Перевіряє результат:
-    - Для серіалів: перевіряє наявність `playerLangGroup`
-    - Для інших контенту: перевіряє наявність `file`
-5. Повертає JSON відповідь у форматі FlutterResponse; якщо жодна назва не дала результату — «Нічого не знайдено»
-
-**Приклад використання:**
-
-```typescript
-import searchDataGlobal from '@/src/shared/libs/search-data.ts';
-
-async function myFetchFunction(query: string, isSerial: boolean) {
-    // Реалізуйте логіку отримання даних
-    return playerData; // або null/помилка
-}
-
-const result = await searchDataGlobal({
-    params: {
-        query: 'назва пошуку',
-        fallbackTitles: ['альтернатива1', 'альтернатива2'],
-        isSerial: false,
-    },
-    fetchFunction: myFetchFunction,
-});
-
-console.log(result); // JSON відповідь або помилка
-```
-
-### 3. Клієнтська логіка (`src/shared/client/mainClient.ts`)
-
-#### `fetchFlutter()` - Запит до Flutter-сервісу
-
-**Параметри:**
-
-- `url`: URL для запиту
-- `method`: HTTP метод ('GET' | 'POST', за замовчуванням 'GET')
-- `extraHeaders`: Додаткові заголовки (за замовчуванням порожній об'єкт)
-- `data`: Дані для відправки (за замовчуванням null)
-- `followRedirects`: Чи слідкувати за редиректами (за замовчуванням false)
-
-**Повернення:**
-
-```typescript
-{
-    data: string,           // JSON дані відповіді
-        headers
-:
-    Record<string, string>  // Заголовки відповіді
-}
-```
-
-**Приклад використання:**
-
-```typescript
-import {fetchFlutter} from '@/src/shared/client/mainClient.ts';
-
-const response = await fetchFlutter(
-    'https://api.example.com/search',
-    'GET',
-    {'X-Custom-Header': 'value'},
-    null,
-    false
-);
-
-if (response) {
-    console.log(JSON.parse(response.data)); // JSON дані | null
-}
-```
-
-### 4. Приклад інтеграції (`src/shared/plugins/example.ts`)
-
-Цей файл демонструє, як реалізувати власний plugin для пошуку.
-
-**Крок 1: Створення файлу в папці `plugins/`**
-
-```typescript
-// src/shared/plugins/ваш_plugin_name.ts
-import {CardItem, PlayerData, SearchParams} from '@/src/shared/types';
-import searchDataGlobal, {IFetchFunctionPromise} from '@/src/shared/libs/search-data.ts';
-import {fetchFlutter} from '@/src/shared/client/mainClient.ts';
-
-async function fetchFunction(
-    query: string,
-    isSerial: boolean
-): Promise<IFetchFunctionPromise> {
-    // Реалізуйте логіку отримання даних
-    return playerData;
-}
-
-async function searchData(params: SearchParams): Promise<string> {
-    return searchDataGlobal({params, fetchFunction});
-}
-
-// Обов'язково додайте до глобального об'єкта
-globalThis.searchData = searchData;
-```
-
-**Крок 2: Реалізація fetchFunction()**
-
-1. **Отримайте відповідь від API:**
-   ```typescript
-   const searchResponse = await fetchFlutter(
-     `${rootUrl}/?query=${encodeURIComponent(query)}&is_serial=${isSerial}`
-   );
-   ```
-
-2. **Обробка результатів пошуку:**
-    - Якщо є кілька варіантів - показуйте діалогове вікно для вибору
-    - Використовуйте `sendMessage('showDialogData', ...)` для інтерактивності
-
-3. **Підготовка даних до відправки:**
-   ```typescript
-   const playerDataString = searchResponse.data;
-   const playerData: PlayerData | null = JSON.parse(playerDataString);
-   return playerData;
-   ```
-
-## 🔄 Робота з діалоговими вікнами
-
-Модуль підтримує інтерактивні діалоги для вибору контенту:
-
-### Показати діалогове вікно
-
-```typescript
-const index = await sendMessage(
-    'showDialogData',
-    JSON.stringify({
-        dialogData: {
-            title: 'Заголовок',
-            cancelText: 'Скасувати',
-            items: [
-                {title: 'Варіант 1'},
-                {title: 'Варіант 2'}
-            ]
-        }
-    })
-);
-
-if (index === null || index === undefined) {
-    // Користувач скасував діалог
-} else {
-    // index - це індекс обраного варіанту
-    const selected = items[index];
-}
-```
-
-### Обробка помилок
-
-- `null` або `undefined` - помилка пошуку
-- Струнне значення - повідомлення про помилку (наприклад, "Скасовано користувачем")
-- `PlayerData` об'єкт - успішний результат
-
-## 📝 Приклад повної інтеграції
-
-```typescript
-// 1. Імпорт необхідних функцій
-import {CardItem, PlayerData} from '@/src/shared/types';
-import searchDataGlobal from '@/src/shared/libs/search-data.ts';
-import {fetchFlutter} from '@/src/shared/client/mainClient.ts';
-
-// 2. Реалізуйте fetchFunction для вашого API
-async function myFetchFunction(query: string, isSerial: boolean) {
-    const response = await fetchFlutter(
-        `https://api.my-service.com/search?query=${encodeURIComponent(query)}&is_serial=${isSerial}`
-    );
-
-    if (!response || !response.data) return null;
-
-    // Обробка результатів пошуку з картками
-    const cards: CardItem[] = JSON.parse(response.data);
-
-    // Якщо є кілька варіантів - показуйте діалог
-    if (cards.length > 1) {
-        const index = await sendMessage(
-            'showDialogData',
-            JSON.stringify({
-                dialogData: {
-                    title: `Оберіть для "${query}"`,
-                    cancelText: 'Скасувати',
-                    items: cards.map(c => ({title: c.title}))
-                }
-            })
-        );
-
-        if (index === null || index === undefined) return null;
-
-        // Отримайте обраний варіант
-        const selectedCard = cards[index];
-
-        // Отримайте детальні дані про файл
-        const fileResponse = await fetchFlutter(selectedCard.href);
-
-        if (!fileResponse) return null;
-
-        return JSON.parse(fileResponse.data);
-    }
-
-    // Якщо є один варіант -直接使用 його
-    const card = cards[0];
-    const fileResponse = await fetchFlutter(card.href);
-
-    if (!fileResponse) return null;
-
-    return JSON.parse(fileResponse.data);
-}
-
-// 3. Використайте searchDataGlobal
-async function searchContent() {
-    try {
-        const result = await searchDataGlobal({
-            params: {
-                query: 'пошук контенту',
-                fallbackTitles: ['резервна назва1', 'резервна назва2'],
-                isSerial: false, // true для серіалів з сезонами
-            },
-            fetchFunction: myFetchFunction,
-        });
-
-        console.log('Пошуковий результат:', result);
-
-        // Обробка результату
-        if (result && typeof result === 'object') {
-            const data = JSON.parse(result);
-
-            if (data.isError) {
-                console.error('Помилка:', data.result);
-            } else {
-                console.log('Успішний результат:', data.result);
-
-                // Обробка PlayerData
-                const playerData: PlayerData = JSON.parse(data.result);
-                console.log('Файл:', playerData.file);
-                console.log('Постер:', playerData.poster);
-            }
-        }
-    } catch (error) {
-        console.error('Помилка пошуку:', error);
-    }
-}
-
-```
-
-## 📚 Додаткова інформація
-
-- **Flutter API**: Використовуйте `fetchFlutter()` для всіх запитів до Flutter-сервісів
-- **Типи даних**: Перевіряйте `src/shared/types/index.ts` для актуальних типів
-- **Діалогові вікна**: Використовуйте `sendMessage('showDialogData', ...)` для інтерактивності
-- **Помилки**: Обробляйте null, undefined та строкові повідомлення про помилки
-
----
+1. Файл `src/shared/plugins/<назва>.ts`; точки входу робіть глобальними через `expose({ searchData })` (або `getDataList`, `runTest`, `onItemSelected`, `onDetailsOpened`, `mapTorrentFiles`).
+2. `yarn build-es` → `dist/<назва>.js`.
+3. Запис у `repository.json` (свій репозиторій) з `type`, `supported_types` і `permissions` — лише те, що плагін справді використовує.
+4. Підвищуйте `version` з кожною зміною коду (застосунок кешує скрипт за `src` + `version`).

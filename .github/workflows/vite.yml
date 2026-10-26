@@ -20,6 +20,7 @@ jobs:
 
       - run: yarn install --frozen-lockfile
       - run: yarn typecheck
+      - run: yarn lint
       - run: yarn build-es
       # Committed example builds must match their sources.
       - run: git diff --exit-code -- dist

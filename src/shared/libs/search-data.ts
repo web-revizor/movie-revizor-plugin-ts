@@ -1,5 +1,6 @@
 import { FlutterResponse, PlayerData, SearchParams } from '../types/index.ts';
 import { cancelledError, notFoundError } from '../utils/utils.ts';
+import { chooseFromList } from './host.ts';
 
 interface ISearchDataGlobal {
   params: SearchParams;
@@ -22,22 +23,14 @@ function isValidResult(playerData: PlayerData, params: SearchParams): boolean {
 
 /** Index of the title the user picked, or null when cancelled. */
 async function chooseTitle(titles: string[]): Promise<number | null> {
-  const dialogData = {
+  return chooseFromList({
     title: 'Оберіть варіант пошуку',
     cancelText: 'Скасувати',
     items: titles.map((t) => ({ title: t })),
     // The app adds a "Більше не питати" switch and then sends
     // `autoSelectTitle` for this plugin.
     autoSelectTitleOption: true,
-  };
-  // eslint-disable-next-line no-undef
-  const index = await sendMessage(
-    'showDialogData',
-    JSON.stringify({ dialogData })
-  );
-  return typeof index === 'number' && index >= 0 && index < titles.length
-    ? index
-    : null;
+  });
 }
 
 /**
@@ -53,7 +46,7 @@ export default async function searchDataGlobal({
     (t, i, arr) => t && t.trim() !== '' && arr.indexOf(t) === i
   );
 
-  if (titles.length > 1 && !params.autoSelectTitle) {
+  if (titles.length > 1 && !params.autoSelectTitle && !params.quiet) {
     const chosen = await chooseTitle(titles);
     if (chosen === null) return cancelledError();
     titles = [titles[chosen], ...titles.filter((_, i) => i !== chosen)];

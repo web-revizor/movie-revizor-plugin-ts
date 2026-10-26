@@ -1,22 +1,56 @@
 {
-  "title": "Example Repo",
-  "description": "Example description",
+  "title": "Movie Revizor SDK examples",
+  "description": "Приклади плагінів із легальним контентом: відкриті фільми Blender Foundation (CC BY 3.0) і фільми в суспільному надбанні (Wikidata, Wikimedia Commons, Internet Archive).",
   "plugins": [
     {
-      "title": "example",
-      "description": "example playerData",
-      "version": "0.0.1",
-      "src": "https://raw.githubusercontent.com/web-revizor/movie-revizor-plugin-ts/refs/heads/main/dist/example.js",
+      "title": "Demo Player",
+      "description": "Відкриті фільми Blender Foundation (Big Buck Bunny, Sintel, Tears of Steel; CC BY 3.0, © Blender Foundation, www.blender.org). Показує вибір назви, «Продовжити», сезони й серії з номерами, субтитри з мовою й форматом і фонове повідомлення без запитів у мережу.",
+      "shortDescription": "Відкриті фільми Blender, без мережевих запитів",
+      "version": "1.0.0",
+      "src": "https://raw.githubusercontent.com/web-revizor/movie-revizor-plugin-ts/refs/heads/main/dist/demoPlayer.js",
       "type": "playerData",
-      "supported_types": ["movie", "show"]
+      "supported_types": ["movie", "show"],
+      "permissions": ["itemData", "dialogs", "toast", "toast.background", "event.detailsOpened"]
     },
     {
-      "title": "exampleData",
-      "description": "example DataList",
-      "version": "0.0.1",
-      "src": "https://raw.githubusercontent.com/web-revizor/movie-revizor-plugin-ts/refs/heads/main/dist/exampleData.js",
+      "title": "Public Domain",
+      "description": "Шукає фільм за TMDB id у Wikidata й відтворює відео з Wikimedia Commons або Internet Archive, лише якщо Wikidata позначає фільм як суспільне надбання.",
+      "shortDescription": "Фільми в суспільному надбанні",
+      "version": "1.0.0",
+      "src": "https://raw.githubusercontent.com/web-revizor/movie-revizor-plugin-ts/refs/heads/main/dist/publicDomain.js",
+      "type": "playerData",
+      "supported_types": ["movie"],
+      "permissions": ["network"]
+    },
+    {
+      "title": "Internet Archive",
+      "description": "Фільми Internet Archive з позначкою суспільного надбання: сторінка запису й торрент, який роздає сам archive.org. Показує поля з постером, «Продовжити» і вибір відео з торрента.",
+      "shortDescription": "Суспільне надбання з archive.org",
+      "version": "1.0.0",
+      "src": "https://raw.githubusercontent.com/web-revizor/movie-revizor-plugin-ts/refs/heads/main/dist/demoDataList.js",
       "type": "dataList",
-      "supported_types": ["movie", "show"]
+      "supported_types": ["movie", "show"],
+      "permissions": ["network", "itemData", "dialogs", "torrent"]
+    },
+    {
+      "title": "Demo Login",
+      "description": "Вхід без справжнього сайту: форма зі збереженням полів (будь-який логін, пароль demo), потім Big Buck Bunny (CC BY 3.0, © Blender Foundation).",
+      "shortDescription": "Приклад входу й збережених полів",
+      "version": "1.0.0",
+      "src": "https://raw.githubusercontent.com/web-revizor/movie-revizor-plugin-ts/refs/heads/main/dist/demoLogin.js",
+      "type": "playerData",
+      "supported_types": ["movie"],
+      "pluginSettingsKey": "demoLogin",
+      "permissions": ["dialogs", "savedFields", "toast"]
+    },
+    {
+      "title": "Self Test",
+      "description": "Викликає кожну функцію хоста й повертає відповіді. З інтерфейсу застосунку не запускається.",
+      "version": "1.0.0",
+      "src": "https://raw.githubusercontent.com/web-revizor/movie-revizor-plugin-ts/refs/heads/main/dist/selfTest.js",
+      "type": "testPlugin",
+      "supported_types": ["movie"],
+      "permissions": ["network", "itemData", "savedFields", "toast"]
     }
   ]
 }

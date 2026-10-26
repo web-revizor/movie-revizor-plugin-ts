@@ -1,8 +1,10 @@
 # Плагіни Movie Revizor
 
-Плагін — це JavaScript-файл, який застосунок завантажує з репозиторію плагінів і виконує у власному QuickJS-рушії (`flutter_js`). Плагін шукає контент на сторонньому сервісі й повертає застосунку посилання на відео (`playerData`) або список довідкових записів (`dataList`).
+Плагін — це JavaScript-файл, який застосунок завантажує з репозиторію плагінів і виконує у власному QuickJS-рушії (`flutter_js`). Плагін шукає контент на сторонньому сервісі й повертає застосунку посилання на відео (`playerData`) або список записів (`dataList`).
 
-Готові типи, клієнт `fetchFlutter` і приклади плагінів — у `src/shared/` цього репозиторію.
+Застосунок — нейтральний інструмент: він не тлумачить тексти плагіна (номери серій, мови, формати плагін передає окремими полями), сам не звертається до джерел без дії користувача (лише повідомляє плагіну події, які той оголосив) і не синхронізує на сервер нічого, що називає плагін чи джерело.
+
+Готові типи, клієнт `fetchFlutter`, обгортки функцій хоста й приклади — у `src/shared/` цього репозиторію (див. [README](../README.md)).
 
 ---
 
@@ -24,6 +26,7 @@
       "type": "playerData",
       "supported_types": ["movie", "show"],
       "pluginSettingsKey": "example",
+      "permissions": ["network", "itemData", "dialogs"],
       "sha256": "<sha256 файлу src у hex>"
     }
   ]
@@ -35,11 +38,12 @@
 | `title`, `description`, `version`, `src` | так | `src` — URL JS-файлу |
 | `type` | ні | `playerData`, `dataList` або `testPlugin` (без поля — `testPlugin`) |
 | `supported_types` | фактично так | `movie`, `show`, `person`. Кнопка плагіна з'являється лише на екранах цих типів; без поля плагін ніде не показується |
+| `permissions` | ні | що плагіну дозволено (нижче «Дозволи») |
 | `shortDescription` | ні | текст картки в списку плагінів |
-| `pluginSettingsKey` | ні | ключ, під яким зберігаються дані користувача (`showDialogFields` з `saveData`, `getSavedData`) |
+| `pluginSettingsKey` | ні | ключ, під яким зберігаються поля форм (`showDialogFields` з `saveData`, `getSavedData`) |
 | `sha256` | ні | SHA-256 файлу `src` (hex). Файл з іншим вмістом застосунок не використовує |
 
-- Плагін визначають URL репозиторію, `src`, `title` і `type`. Зміна `version` — оновлення того самого плагіна (стан «увімкнено» і збережені дані лишаються); зміна будь-якого з цих чотирьох полів дає новий, вимкнений плагін.
+- Плагін визначають URL репозиторію, `src`, `title` і `type`. Зміна `version` — оновлення того самого плагіна (стан «увімкнено», дозволи й збережені дані лишаються); зміна будь-якого з цих чотирьох полів дає новий, вимкнений плагін.
 - URL репозиторію і `src` — лише `https://`.
 - Скрипт кешується за парою `src` + `version`. **Щоб користувачі отримали новий код, підвищуйте `version`** (і оновлюйте `sha256`).
 - Застосунок стартує з кешованими скриптами, а репозиторії перевіряє у фоні після старту та за кнопкою «Перевірити оновлення».
@@ -48,9 +52,32 @@
 
 ---
 
+## Дозволи
+
+Плагін перелічує в `permissions`, що йому потрібно. Усе оголошене ввімкнено одразу (і нове з наступної версії теж); користувач може вимкнути кожен дозвіл у вікні плагіна («Дозволи», там же опис кожного).
+
+| Дозвіл | Що відкриває |
+|--------|--------------|
+| `network` | `pluginRequest` у запусках, які почав користувач |
+| `network.background` | `pluginRequest` у фонових запусках (`onDetailsOpened`, `quiet`); без нього у фоні плагін бачить лише свої збережені дані |
+| `itemData` | `getItemData` / `setItemData` |
+| `savedFields` | збереження полів форм (`saveData`) і `getSavedData` |
+| `dialogs` | `showDialogData`, `showDialogFields` |
+| `toast` | `showToast` у запусках, які почав користувач |
+| `toast.background` | `showToast` з фонових запусків |
+| `torrent` | `torrentUrl` у записах `dataList` (кнопка «Дивитися») і `mapTorrentFiles` |
+| `event.detailsOpened` | виклик `onDetailsOpened`, коли відкривається сторінка фільму чи серіалу |
+
+- Канал без дозволу не викликає помилку в скрипті, а відповідає як «немає»: `pluginRequest` → `{"error": "permission network is not granted"}`, `setItemData` і `showToast` → `false`, решта → `null` (як скасований діалог чи відсутнє значення). `showDialogFields` без `savedFields` показує форму, але нічого не зберігає.
+- Кожен вид фонової роботи — окремий дозвіл (`event.<назва>`, `<канал>.background`); нова подія ніколи не розширює старий дозвіл.
+- Плагін без поля `permissions` (старі репозиторії) отримує все, крім `event.*` і `*.background`: працює як раніше, але без фонових запусків.
+- `setPluginInit` / `isPluginInit` дозволу не потребують.
+
+---
+
 ## Точки входу
 
-Скрипт має оголосити глобальну функцію з назвою, що відповідає типу:
+Скрипт оголошує глобальну функцію з назвою, що відповідає типу:
 
 | `type` | Функція | Де викликається |
 |--------|---------|-----------------|
@@ -58,7 +85,9 @@
 | `dataList` | `getDataList(params)` | кнопки пошуку на екранах деталей |
 | `testPlugin` | `runTest(params)` | з UI не викликається |
 
-Якщо функції немає, плагін вимикається з помилкою. Функція може бути `async`; вона повертає **JSON-рядок** `FlutterResponse`:
+Необов'язкові функції (будь-якого типу): `onItemSelected`, `onDetailsOpened`; для `dataList` ще `mapTorrentFiles`.
+
+Якщо обов'язкової функції немає, плагін вимикається з помилкою. Функція може бути `async`; вона повертає **JSON-рядок** `FlutterResponse`:
 
 ```javascript
 class FlutterResponse {
@@ -71,11 +100,12 @@ class FlutterResponse {
 return JSON.stringify(new FlutterResponse({ result: JSON.stringify(data), isError: false }));
 ```
 
-`result` — завжди рядок; дані серіалізуються двічі.
+`result` — завжди рядок; дані серіалізуються двічі (`okResponse(data)` / `errorResponse(text)` у `src/shared/utils/utils.ts`).
 
 - `params` приходить готовим об'єктом; рядки передаються без змін (лапки, `\`, переноси рядків).
 - Виняток або відхилений проміс стає помилкою з текстом винятку (`isError: true`).
 - Виклик, що понад 45 с не робить жодного `sendMessage` і не завершується, перериває хост з помилкою «Плагін не відповідає». Час усередині `sendMessage` (запити, діалоги, де користувач обирає) не враховується.
+- Усі запуски плагіна виконуються в одному рушії, тож глобальні змінні спільні між запусками.
 
 ### Параметри `searchData`
 
@@ -83,48 +113,95 @@ return JSON.stringify(new FlutterResponse({ result: JSON.stringify(data), isErro
 |------|-----|------|
 | `query` | string | перший варіант назви |
 | `fallbackTitles` | string[] | інші варіанти: локалізована / оригінальна назва, кожна ще й з роком |
-| `autoSelectTitle` | bool? | користувач вимкнув для цього плагіна вибір назви («Більше не питати» у вікні вибору або «Питати, з якої назви шукати» в діалозі репозиторію): не питати, а пробувати назви по черзі. Без нього — спитати, почати з обраної, потім решта |
-| `isSerial` | bool? | серіал |
-| `isMovie` | bool? | фільм |
-| `isPerson` | bool? | персона |
-| `seasonNumber`, `episodeNumber` | int? | заповнені на екранах сезону / епізоду |
+| `autoSelectTitle` | bool? | користувач вимкнув для цього плагіна вибір назви: не питати, а пробувати назви по черзі |
+| `isSerial`, `isMovie`, `isPerson` | bool? | вид тайтлу |
+| `seasonNumber`, `episodeNumber` | int? | номери TMDB на екранах сезону / епізоду |
 | `seriesTitle` | string? | назва серіалу на екранах сезону / епізоду; тоді `query` = `"<серіал> <назва сезону/епізоду>"` |
 | `tmdbId`, `mediaType` | int?, `'movie'`/`'tv'` | TMDB id тайтлу (на екранах сезону / епізоду — серіалу) і його вид; разом — ключ для даних, які плагін зберігає для тайтлу |
-| `quiet` | bool? | запуск не від користувача (фонове оновлення): діалоги не показуються |
-| `resume` | bool? | див. нижче «Продовжити й вибір» |
+| `quiet` | bool? | запуск не від користувача: діалоги відповідають `null` одразу, діють фонові дозволи |
+| `resume` | bool? | див. «Продовжити й вибір» |
 
 ### Параметри `getDataList`
+
+Ті самі ключі, що й у `searchData` (без `fallbackTitles` / `autoSelectTitle`), плюс:
 
 | Ключ | Тип | Опис |
 |------|-----|------|
 | `query` | string | назва (локалізована, інакше оригінальна) |
 | `serialID` | int? | TMDB id серіалу (для фільмів `null`) |
-| `isSerial` | bool? | серіал |
-| `tmdbId` | int? | TMDB id фільму або серіалу на його головному екрані (на екранах сезону, серії й персони `null`); разом з `isSerial` — ключ для даних, які плагін зберігає для цього тайтлу |
-| `traktId`, `traktIds` | — | зараз завжди `null` |
-
-Крім цього `getDataList` отримує ті самі ключі, що й `searchData` (`mediaType`, `quiet`, `resume`, `seasonNumber`, `episodeNumber`, `seriesTitle`, `isPerson`, `isMovie`).
+| `tmdbId` | int? | TMDB id фільму або серіалу лише на його головному екрані (на екранах сезону, серії й персони `null`) |
+| `traktId`, `traktIds` | — | застарілі, завжди `null` |
 
 ### «Продовжити» й вибір (`resume`)
 
-Застосунок повідомляє, чи це «Продовжити», у `params.resume` обох типів плагінів:
-
-- `true` — «Продовжити»: використай те, що запам'ятав для цього тайтлу, і не питай, якщо можеш. Те саме для тихого фонового оновлення (`quiet: true`; діалоги там усе одно заборонені).
+- `true` — «Продовжити»: використай те, що запам'ятав для цього тайтлу, і не питай, якщо можеш. Те саме для тихого запуску (`quiet: true`).
 - `false` — «Обрати» або перший запуск: **не використовуй** запам'ятаного, спитай знову й запам'ятай нову відповідь.
-- ключа немає — стара версія застосунку: поводься як раніше.
+- ключа немає — стара версія застосунку.
 
-Запам'ятовує плагін сам (`getItemData` / `setItemData`); застосунок не бачить і не зберігає даних плагіна. Що саме користувач обрав, застосунок повідомляє через `onItemSelected`.
+Запам'ятовує плагін сам (`getItemData` / `setItemData`); застосунок даних плагіна не читає. Що саме користувач обрав, застосунок повідомляє через `onItemSelected`.
 
-### `onItemSelected(params)` — необов'язкова точка входу
+Історія переглядів синхронізується між пристроями без даних плагіна (лише тайтл, номери сезону / серії, позиція). На іншому пристрої «Продовжити» пропонує будь-який плагін: він отримує `resume: true`, а плеєр відкриває серію за номерами (`number`) на збереженій позиції.
 
-Якщо скрипт оголошує глобальну `onItemSelected`, застосунок викликає її, коли користувач обирає те, що запропонував плагін. Результат ігнорується, помилки й завислий виклик не впливають на відтворення (застосунок не чекає на неї), діалоги в ній не показуються.
+### `onItemSelected(params)` — необов'язкова
+
+Застосунок викликає її, коли користувач обирає те, що запропонував плагін. Результат ігнорується, помилки й завислий виклик не впливають на відтворення, діалоги в ній не показуються.
 
 `params` — `tmdbId`, `mediaType`, `isSerial`, `seasonNumber`, `episodeNumber` і `selected`:
 
 | `selected.kind` | Коли | Вміст |
 |-----------------|------|-------|
 | `dataListItem` | запущено дію запису («Дивитися» / «Відкрити») | `item` — запис точно так, як його повернув плагін |
-| `playerData` | відкрито плеєр і при кожній зміні епізоду (не при оновленні позиції) | `langGroup`, `season`, `episode`: `{ title, index }` у даних, які повернув плагін (`null`, якщо рівня немає) |
+| `playerData` | відкрито плеєр і при кожній зміні епізоду | `langGroup`, `season`, `episode`: `{ title, index }` у даних, які повернув плагін (`null`, якщо рівня немає) |
+
+### `onDetailsOpened(params)` — необов'язкова, дозвіл `event.detailsOpened`
+
+Застосунок повідомляє, що відкрито сторінку фільму чи серіалу: `{ tmdbId, mediaType, isSerial, seasonNumber, episodeNumber, quiet: true }`. Що робити — вирішує плагін; застосунок сам нікуди не звертається.
+
+- Через 2 с після відкриття сторінки, не частіше ніж раз на 30 хв для одного плагіна й тайтлу, по одному фоновому запуску плагіна водночас. Результат ігнорується, сторінка на нього не чекає.
+- Діалоги відповідають `null`; `pluginRequest` лише з `network.background`, `showToast` лише з `toast.background`.
+- **Правила для авторів:** у фоні звертайтеся до мережі лише по тайтлах, для яких плагін уже має свої дані (`getItemData`); не робіть більше кількох запитів; не надсилайте ідентифікатори користувача; не показуйте повідомлень без нової для користувача інформації.
+
+### `mapTorrentFiles(params)` — необов'язкова, `dataList` з дозволом `torrent`
+
+Після завантаження `.torrent` із запису (`torrentUrl`) застосунок передає плагіну список файлів, щоб той сказав, що відтворювати:
+
+```json
+{
+  "files": [{ "index": 0, "path": "Show/Season 1/Show.S01E01.mkv", "size": 734003200 }],
+  "tmdbId": 1399, "mediaType": "tv", "isSerial": true,
+  "seasonNumber": 2, "episodeNumber": null,
+  "item": { "title": "…", "torrentUrl": "…" },
+  "quiet": true
+}
+```
+
+Відповідь — `PlayerData`, де в серій замість `file` стоїть `torrentFile` (індекс файлу), або для фільму `{ "torrentFile": 3 }`:
+
+```json
+{
+  "playerLangGroup": [
+    {
+      "title": "Оригінал",
+      "seasons": [
+        {
+          "title": "Сезон 1",
+          "number": 1,
+          "episodes": [
+            { "title": "Серія 1", "number": 1, "torrentFile": 0,
+              "subtitle": [{ "title": "UA", "torrentFile": 5, "lang": "uk", "format": "srt" }] }
+          ]
+        }
+      ]
+    }
+  ],
+  "start": null
+}
+```
+
+- Повертайте всі сезони роздачі; застосунок сам відкриває сезон / серію екрана, з якого її запустили (за `number`), або `start`, якщо він є.
+- Серії з індексом поза роздачею відкидаються; якщо нічого не лишилося або функції немає — грає найбільший файл (як для фільму).
+- Субтитри — файл роздачі (`torrentFile`) або `url`.
+- Розбирати назви файлів — справа плагіна; `episodeFromPath()` у `src/shared/libs/episode-from-path.ts` знає типові шаблони (`S01E02`, `1x02`, «Сезон 1 … Серія 2», теки сезонів).
 
 ---
 
@@ -138,7 +215,7 @@ return JSON.stringify(new FlutterResponse({ result: JSON.stringify(data), isErro
 {
   "file": "https://cdn.example.com/movie.m3u8",
   "poster": "https://cdn.example.com/poster.jpg",
-  "subtitle": [{ "title": "Українська", "url": "https://example.com/subs/uk.srt" }]
+  "subtitle": [{ "title": "Українська", "url": "https://example.com/subs/uk.srt", "lang": "uk", "format": "srt" }]
 }
 ```
 
@@ -150,13 +227,15 @@ return JSON.stringify(new FlutterResponse({ result: JSON.stringify(data), isErro
       "seasons": [
         {
           "title": "Сезон 1",
+          "number": 1,
           "episodes": [
             {
               "title": "Епізод 1",
+              "number": 1,
               "file": "https://cdn.example.com/s1e1.m3u8",
               "id": "s1e1",
               "poster": "https://cdn.example.com/s1e1.jpg",
-              "subtitle": [{ "title": "UA", "url": "https://example.com/subs/s1e1.srt" }]
+              "subtitle": [{ "title": "UA", "url": "https://example.com/subs/s1e1.vtt", "lang": "uk", "format": "vtt" }]
             }
           ]
         }
@@ -166,10 +245,10 @@ return JSON.stringify(new FlutterResponse({ result: JSON.stringify(data), isErro
 }
 ```
 
-- Обов'язкові: `title` у групи / сезону / епізоду, `file` в епізоду, `seasons`, `episodes`.
-- Необов'язкове `start: { "langGroup": 0, "season": 0, "episode": 2 }` (індекси в поверненому `playerLangGroup`) — де почати «Продовжити». Застосунок відкриває це місце на збереженій позиції; без `start` або з індексами поза межами шукає серію за номерами в назвах.
-- `id` епізоду — **рядок** (число зламає розбір).
-- `subtitle` — масив `{title, url}`, не рядок. Формат визначається за розширенням у `url`: `.srt`, `.ass` / `.ssa`, `.ttml` / `.dfxp` / `.xml`, інакше WebVTT. Мову плеєр бере з `title` («Українська…», «Англійська…» / «English», «Російська…»), а перші субтитри в списку вмикаються за замовчуванням.
+- Обов'язкові: `title` у групи / сезону / епізоду, `file` в епізоду, `seasons`, `episodes`, **`number` у сезону й епізоду** — власний номер з джерела, або `null` для спецвипусків і об'єднаних серій («Серія 1-2»). Застосунок не читає номери з назв: від `number` залежать історія, «Продовжити», позначки «S2 E5» і відкриття з екрана сезону / серії.
+- Необов'язкове `start: { "langGroup": 0, "season": 0, "episode": 2 }` (індекси в поверненому `playerLangGroup`) — де почати «Продовжити»; має перевагу над номерами.
+- `id` епізоду — **рядок**.
+- `subtitle` — масив `{title, url, lang, format}`. `lang` — код мови BCP 47 (`uk`, `en`, …) або `null`; `format` — `srt`, `vtt`, `ass`, `ttml` або `null` (тоді WebVTT). Застосунок нічого не вгадує з назви чи розширення. За замовчуванням увімкнено перший трек мовою застосунку, інакше перший у списку.
 
 ### `dataList`: масив записів
 
@@ -183,49 +262,55 @@ return JSON.stringify(new FlutterResponse({ result: JSON.stringify(data), isErro
 ]
 ```
 
-`fields` показуються як «ключ: значення» (до 4 полів, без `title` і без значень, що починаються з `http`). Кнопка «Відкрити» відкриває `link`.
+`fields` показуються як «ключ: значення» (до 4 полів, без `title` і `poster`); `poster` (URL `https://` зображення) показується як картинка. Не кладіть у `fields` службових значень. Кнопка «Відкрити» відкриває `link`.
 
-Необов'язкове `"resume": true` у записі: у запуску з `params.resume === true` застосунок одразу відтворює цей запис (`torrentUrl`, інакше відкриває `link`) замість списку. Без такого запису, або якщо в ньому немає `torrentUrl` і `link`, показується звичайний список. Єдиний звичайний запис автоматично не відтворюється.
+Необов'язкове `"resume": true`: у запуску з `params.resume === true` застосунок одразу відтворює цей запис (`torrentUrl`, інакше відкриває `link`) замість списку.
 
-Необов'язкове поле `torrentUrl` — адреса `.torrent`-файлу (HTTPS). Тоді з'являється кнопка «Дивитися»: застосунок сам завантажує файл з cookies плагіна (вхід на сайт, виконаний плагіном, діє й тут), з тими ж перевірками адрес, що й `pluginRequest`, і розміром до 4 МБ, та відтворює найбільший файл роздачі з пам'яті, нічого не записуючи на диск. Трекери з файлу зберігаються, тож це працює й для закритих трекерів (magnet без трекера там не знайде пірів).
+Необов'язкове `torrentUrl` — адреса `.torrent`-файлу (HTTPS), потрібен дозвіл `torrent`. Тоді з'являється кнопка «Дивитися»: застосунок сам завантажує файл з cookies плагіна, з тими ж перевірками адрес, що й `pluginRequest`, і розміром до 4 МБ, та відтворює з пам'яті, нічого не записуючи на диск (що саме — див. `mapTorrentFiles`). За замовчуванням застосунок не роздає дані іншим учасникам; користувач може ввімкнути роздачу в налаштуваннях торрентів.
 
 ---
 
 ## Функції хоста (`sendMessage`)
 
-Плагін звертається до застосунку через `await sendMessage(channel, JSON.stringify(args))`.
+Плагін звертається до застосунку через `await sendMessage(channel, JSON.stringify(args))`. Типізовані обгортки — `src/shared/libs/host.ts` і `src/shared/client/mainClient.ts`.
 
-### `pluginRequest` — HTTP-запит
+### `pluginRequest` — HTTP-запит (`network`)
 
-`fetch` і `XMLHttpRequest` у рушії **вимкнені**; усі запити йдуть через цей канал.
+`fetch` і `XMLHttpRequest` у рушії **вимкнені**; усі запити йдуть через цей канал. У SDK — `fetchFlutter(url, options)` (а також `fetchText` / `fetchJson`): повертає `{statusCode, data, headers}` і кидає `PluginRequestError`, коли відповіді немає (відмова хоста, мережа, статус ≥ 500) або статус ≥ 400 (`allowErrorStatus: true`, щоб отримати таку сторінку). Текст помилки варто показати користувачу (`errorResponse(e.message)`).
 
-```javascript
-async function fetchUrl(url, { method = 'GET', headers = {}, data = null, queryParameters = null, followRedirects = true } = {}) {
-  const raw = await sendMessage('pluginRequest', JSON.stringify({
-    url, method, headers, data, queryParameters, followRedirects,
-  }));
-  const res = JSON.parse(raw);
-  if (res.error) throw new Error(res.error);
-  if (res.statusCode >= 400) throw new Error('HTTP ' + res.statusCode);
-  return res.data;
-}
+```typescript
+import { fetchFlutter, fetchText, PluginRequestError } from '../client/mainClient.ts';
 
-const html = await fetchUrl('https://example.com/search', {
+const html = await fetchText('https://example.com/search', {
   method: 'POST',
   headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
   data: { q: 'Breaking Bad' },
 });
+const res = await fetchFlutter('https://example.com/api', { queryParameters: { id: '42' } });
 ```
 
-- Аргументи: `url`, `method` — обов'язкові; `headers`, `queryParameters`, `data` (об'єкт або рядок), `followRedirects` (типово `false`).
+> До версії SDK з дозволами `fetchFlutter(url, method, headers, data, followRedirects)` приймав позиційні аргументи, повертав `null` замість помилки й не йшов за перенаправленнями. Під час оновлення: `if (!res) return null` → `try { … } catch (e) { … }`, позиційні аргументи → об'єкт опцій.
+
+Сам канал:
+
+```javascript
+const raw = await sendMessage('pluginRequest', JSON.stringify({
+  url: 'https://example.com/search', method: 'POST',
+  headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+  data: { q: 'Breaking Bad' }, followRedirects: true,
+}));
+const res = JSON.parse(raw); // { statusCode, headers, data } або { error }
+```
+
+- Аргументи: `url`, `method` — обов'язкові; `headers`, `queryParameters`, `data` (об'єкт або рядок), `followRedirects` (у каналі типово `false`; `fetchFlutter` у SDK передає `true`).
 - Об'єкт `data` з `Content-Type: application/x-www-form-urlencoded` кодується у форму.
 - Відповідь — JSON-рядок `{statusCode, headers, data}` (`headers` — значення через кому; `data` — рядок, або вже розібраний об'єкт для JSON-відповідей) чи `{error}`.
-- Лише `https://` з дійсним сертифікатом. Заборонені адреси пристрою й локальної мережі: `localhost`, `*.local`, приватні, loopback, link-local і CGNAT діапазони IPv4 / IPv6. Перевіряється IP, на який вказує домен, тож обійти це доменним ім'ям не вийде.
-- З `followRedirects: true` до 5 перенаправлень; кожне проходить ту саму перевірку (перехід на `http` чи локальну адресу дає `{error}`). POST після 301 / 302 / 303 стає GET, після 307 / 308 лишається POST.
+- Лише `https://` з дійсним сертифікатом. Заборонені адреси пристрою й локальної мережі: `localhost`, `*.local`, приватні, loopback, link-local і CGNAT діапазони IPv4 / IPv6. Перевіряється IP, на який вказує домен.
+- З `followRedirects: true` до 5 перенаправлень; кожне проходить ту саму перевірку. POST після 301 / 302 / 303 стає GET, після 307 / 308 лишається POST.
 - Статус ≥ 500 повертається як `{error}`. Тайм-аут з'єднання й отримання — 10 с.
 - Cookie окремі для кожного плагіна й зберігаються до перезапуску застосунку; `User-Agent: Mozilla/5.0`, якщо не задано свій.
 
-### `showDialogData` — вибір зі списку
+### `showDialogData` — вибір зі списку (`dialogs`)
 
 ```javascript
 const index = await sendMessage('showDialogData', JSON.stringify({
@@ -238,11 +323,11 @@ const index = await sendMessage('showDialogData', JSON.stringify({
 if (index === null || index === undefined) return cancelled; // 0 — валідний вибір
 ```
 
-Кожен елемент — довільні поля: `title` — заголовок, значення-URL на `.jpg/.jpeg/.png/.webp` показуються як постер, решта — як «ключ: значення». Повертає індекс обраного елемента або `null`.
+Кожен елемент: `title` — заголовок, `poster` (URL `https://` зображення) — картинка, решта — «ключ: значення». Повертає індекс обраного елемента або `null`.
 
-`autoSelectTitleOption: true` (так робить вікно вибору назви в `searchDataGlobal`) додає під списком перемикач «Більше не питати»: якщо його увімкнено, застосунок запам'ятовує це для плагіна й далі передає `autoSelectTitle: true`.
+`autoSelectTitleOption: true` (так робить вікно вибору назви в `searchDataGlobal`) додає під списком перемикач «Більше не питати»: якщо його увімкнено, застосунок далі передає цьому плагіну `autoSelectTitle: true`.
 
-### `showDialogFields` — форма введення
+### `showDialogFields` — форма введення (`dialogs`)
 
 ```javascript
 const values = await sendMessage('showDialogFields', JSON.stringify({
@@ -260,28 +345,37 @@ const values = await sendMessage('showDialogFields', JSON.stringify({
 // { login: '…', password: '…' } або null при скасуванні
 ```
 
-З `saveData: true` і заданим `pluginSettingsKey` у конфігу значення зберігаються в захищеному сховищі й підставляються при наступному показі.
+- `saveData: true` з `pluginSettingsKey` у конфігу й дозволом `savedFields` — значення зберігаються в захищеному сховищі й підставляються при наступному показі.
+- `value` у полі — текст, з яким воно відкривається (наприклад, назва, за якою плагін щойно шукав). Збережене значення має перевагу над `value`.
 
-`value` у полі — текст, з яким воно відкривається (наприклад, назва, за якою плагін щойно шукав, щоб користувач її виправив). Збережене значення (`saveData`) має перевагу над `value`.
-
-```javascript
-const fixed = await sendMessage('showDialogFields', JSON.stringify({
-  dialogFields: {
-    title: 'Нічого не знайдено',
-    applyText: 'Шукати',
-    cancelText: 'Скасувати',
-    items: [{ label: 'Назва', fieldKey: 'query', value: params.query }],
-  },
-}));
-// { query: '…' } або null
-```
-
-### `getSavedData` — збережені значення
+### `getSavedData` — збережені поля (`savedFields`)
 
 ```javascript
 const saved = await sendMessage('getSavedData', JSON.stringify({ savedFields: ['login', 'password'] }));
 // { login: '…' | null, password: '…' | null }
 ```
+
+### `getItemData` / `setItemData` — дані плагіна для тайтлів (`itemData`)
+
+```javascript
+await sendMessage('setItemData', JSON.stringify({
+  key: 'tv:1399:page', value: JSON.stringify({ url: '…' }), label: 'Гра престолів — сторінка на сайті',
+})); // true / false
+const raw = await sendMessage('getItemData', JSON.stringify({ key: 'tv:1399:page' })); // рядок або null
+await sendMessage('setItemData', JSON.stringify({ key: 'tv:1399:page', value: null })); // видалити
+```
+
+- Лише на пристрої, без синхронізації; видаляється разом із плагіном або репозиторієм. Окремо для кожного плагіна (той самий плагін у двох репозиторіях має окремі дані).
+- Ключ 1..128 символів без переносу рядка; значення разом з `label` — до 8 КБ (UTF-8); до 2000 ключів на плагін. Перевищення — `false`, нічого не збережено.
+- Користувач бачить записи у «Збережених даних» плагіна: `label`, якщо є, інакше сам ключ; може видалити будь-який. Тож давайте зрозумілі ключі й підписи.
+
+### `showToast` — коротке повідомлення (`toast`, у фоні `toast.background`)
+
+```javascript
+await sendMessage('showToast', JSON.stringify({ text: '2 нові серії' })); // true / false
+```
+
+Показується як «<назва плагіна>: <текст>», один рядок до 120 символів (довший обрізається «…»). Не частіше ніж раз на 5 с для плагіна; зайві виклики повертають `false`.
 
 ### `setPluginInit` / `isPluginInit`
 
@@ -291,30 +385,21 @@ const saved = await sendMessage('getSavedData', JSON.stringify({ savedFields: ['
 
 ## Мінімальний `playerData`-плагін
 
-```javascript
-async function searchData(params) {
-  const error = (text) => JSON.stringify(new FlutterResponse({ result: text, isError: true }));
+```typescript
+import { PlayerData, SearchParams } from '../types/index.ts';
+import searchDataGlobal, { IFetchFunctionPromise } from '../libs/search-data.ts';
+import { fetchJson } from '../client/mainClient.ts';
+import { expose } from '../utils/utils.ts';
 
-  const titles = [params.query, ...(params.fallbackTitles || [])]
-    .filter((t, i, arr) => t && t.trim() !== '' && arr.indexOf(t) === i);
-
-  for (const title of titles) {
-    let playerData;
-    try {
-      playerData = await fetchPlayerDataForQuery(title, params.isSerial);
-    } catch (e) {
-      console.log(`Помилка для "${title}": ${e}`);
-      continue;
-    }
-    const valid = params.isSerial
-      ? playerData?.playerLangGroup?.length > 0
-      : !!playerData?.file;
-    if (valid) {
-      return JSON.stringify(new FlutterResponse({ result: JSON.stringify(playerData), isError: false }));
-    }
-  }
-  return error(`Нічого не знайдено: ${params.query}`);
+async function fetchFunction(params: SearchParams): Promise<IFetchFunctionPromise> {
+  const found = await fetchJson<{ url?: string }>(
+    `https://api.example.com/search?q=${encodeURIComponent(params.query)}`
+  );
+  // null — за цією назвою нічого, searchDataGlobal спробує наступну.
+  return found.url ? new PlayerData({ file: found.url }) : null;
 }
+
+expose({ searchData: (params: SearchParams) => searchDataGlobal({ params, fetchFunction }) });
 ```
 
-`fetchPlayerDataForQuery` — функція, специфічна для сервісу: пошук через `fetchUrl`, вибір результату через `showDialogData`, розбір сторінки у `PlayerData`.
+`searchDataGlobal` питає, з якої назви почати (якщо `autoSelectTitle` не задано й запуск не тихий), і пробує назви по черзі. `fetchFunction` повертає `PlayerData`, `null` (нічого за цією назвою) або рядок (зупинитися з цим повідомленням).
