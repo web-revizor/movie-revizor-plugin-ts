@@ -61,7 +61,7 @@ async function searchData(params: SearchParams): Promise<string> {
     }
     const commons = rows
       .map((r) => r.video?.value)
-      .find((v): v is string => !!v && !/trailer|трейлер/i.test(decodeURIComponent(v)));
+      .find((v): v is string => !!v && !/trailer|трейлер/iu.test(decodeURIComponent(v)));
     const ia = rows.map((r) => r.ia?.value).find((v): v is string => !!v);
     const file =
       commons?.replace(/^http:/, 'https:') ?? (ia ? await archiveVideo(ia) : null);
