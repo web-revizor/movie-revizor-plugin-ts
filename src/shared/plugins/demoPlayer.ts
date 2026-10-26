@@ -140,7 +140,8 @@ async function fetchFunction(params: SearchParams): Promise<IFetchFunctionPromis
 }
 
 async function searchData(params: SearchParams): Promise<string> {
-  const answer = await searchDataGlobal({ params, fetchFunction });
+  // Its own film picker replaces the typed-title form.
+  const answer = await searchDataGlobal({ params, fetchFunction, askTitle: false });
   const found = !(JSON.parse(answer) as { isError: boolean }).isError;
   if (found || params.isSerial || params.quiet) return answer;
   // No title matched a demo film: let the user pick one and remember it.

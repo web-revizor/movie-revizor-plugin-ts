@@ -402,4 +402,4 @@ async function fetchFunction(params: SearchParams): Promise<IFetchFunctionPromis
 expose({ searchData: (params: SearchParams) => searchDataGlobal({ params, fetchFunction }) });
 ```
 
-`searchDataGlobal` питає, з якої назви почати (якщо `autoSelectTitle` не задано й запуск не тихий), і пробує назви по черзі. `fetchFunction` повертає `PlayerData`, `null` (нічого за цією назвою) або рядок (зупинитися з цим повідомленням).
+`searchDataGlobal` питає, з якої назви почати (якщо `autoSelectTitle` не задано й запуск не тихий), і пробує назви по черзі. Якщо жодна нічого не дала, показує форму «Нічого не знайдено» з назвою, яку можна виправити, і повторює, доки щось не знайдеться або користувач не скасує; назва, що спрацювала, запам'ятовується для тайтлу (`itemData`, ключ `<movie|tv>:<tmdbId>:title`) і наступного разу пробується першою без вибору. Вимикається `askTitle: false` (потрібні дозволи `dialogs` і `itemData`). `fetchFunction` повертає `PlayerData`, `null` (нічого за цією назвою) або рядок (зупинитися з цим повідомленням).
