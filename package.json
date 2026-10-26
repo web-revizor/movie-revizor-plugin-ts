@@ -10,7 +10,8 @@
     "build-es": "node build.js",
     "watch": "node build.js --watch",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src"
+    "lint": "eslint src",
+    "test": "node scripts/test.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.2",

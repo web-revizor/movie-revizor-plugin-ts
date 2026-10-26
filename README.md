@@ -43,6 +43,7 @@ Node.js 24, Yarn 1.
 yarn install --frozen-lockfile
 yarn typecheck
 yarn lint
+yarn test           # tests/*.test.ts (node:test)
 yarn build-es        # dist/*.js (esbuild, ES2020, без import/export)
 ```
 
